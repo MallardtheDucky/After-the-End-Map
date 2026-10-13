@@ -19,7 +19,7 @@
 <meta name="twitter:image" content="https://mallardtheducky.github.io/After-the-End-Map/images/logo.png">
 <link rel="icon" type="image/png" href="images/logo.png">
 <link rel="apple-touch-icon" href="images/logo.png">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="stylesheet" href="lib/leaflet.css">
 <style>
   html, body, #map {
@@ -395,11 +395,114 @@
     border: 1px solid #000000;
     vertical-align: middle;
   }
+
+  #modes-toggle, #info { display: none; }
+  #info {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    z-index: 1200;
+    max-height: 62vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  }
+  #info.open { display: block; background: #ffffff; }
+  @media (hover: none) { .leaflet-tooltip.pm-tip { display: none; } }
+  #info .pm-tip { position: static; width: auto; max-width: none; margin: 0; font: 13px/1.4 "Segoe UI", system-ui, -apple-system, sans-serif; color: #1b1d22; }
+  #info .close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 1;
+    min-width: 40px;
+    min-height: 40px;
+    font: 700 22px/1 sans-serif;
+    color: inherit;
+    background: rgba(255, 255, 255, 0.25);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  @media (max-width: 700px) {
+    #map::before, #map::after, .leaflet-control-zoom { display: none; }
+    #modes {
+      top: 8px;
+      right: 8px;
+      left: 8px;
+      max-width: none;
+      max-height: calc(100% - 16px);
+      overflow-y: auto;
+      box-sizing: border-box;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+      gap: 10px;
+      padding: 4px;
+    }
+    #modes-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      min-height: 44px;
+      padding: 0 10px;
+      font: 700 14px sans-serif;
+      color: #000000;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+    #modes-toggle::after { content: "Change"; font-weight: 600; font-size: 12px; color: #555555; }
+    #modes.open #modes-toggle::after { content: "Close"; }
+    #modes:not(.open) .group { display: none; }
+    #modes .group { padding: 0 6px; gap: 6px; }
+    #modes button:not(#modes-toggle) {
+      min-height: 44px;
+      padding: 8px 14px;
+      font-size: 14px;
+    }
+    #legend {
+      top: auto !important;
+      left: 8px;
+      right: 8px;
+      bottom: calc(8px + env(safe-area-inset-bottom));
+      width: auto;
+      max-width: none;
+      max-height: 45vh;
+      padding: 0 10px 8px;
+    }
+    #legend .title {
+      position: relative;
+      margin: 0 -10px 4px;
+      padding: 12px 40px 12px 10px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #legend .title::after {
+      content: "+";
+      position: absolute;
+      right: 14px;
+      top: 8px;
+      font-size: 20px;
+    }
+    #legend:not(.collapsed) .title::after { content: "-"; }
+    #legend.collapsed { padding-bottom: 0; }
+    #legend.collapsed > :not(.title) { display: none; }
+    #legend.collapsed .title { margin-bottom: 0; }
+    #legend input { padding: 8px; font-size: 16px; }
+    #legend .row { padding: 6px 4px; font-size: 14px; }
+    #legend .hint { font-size: 12px; }
+    #info .pm-tip .line { grid-template-columns: 88px 1fr; }
+  }
 </style>
 </head>
 <body>
 <div id="map"></div>
 <div id="modes">
+  <button type="button" id="modes-toggle"><span id="modes-current">Map Mode</span></button>
   <div class="group" data-label="Who rules">
     <button type="button" data-mode="nation">Nation</button>
     <button type="button" data-mode="vassal">Vassals</button>
@@ -420,6 +523,7 @@
   <div class="group" data-label="Other" id="grp-other"></div>
 </div>
 <div id="legend"></div>
+<div id="info"></div>
 <script src="lib/leaflet.js"></script>
 <script src="data/provinces.js"></script>
 <script src="data/players.js" onerror="this.remove()"></script>
@@ -495,6 +599,58 @@
   L.DomEvent.disableClickPropagation(modesEl);
   L.DomEvent.disableClickPropagation(legendEl);
   L.DomEvent.disableScrollPropagation(legendEl);
+
+  const isMobile = () => window.matchMedia("(max-width: 700px)").matches;
+  const isTouch = () => window.matchMedia("(hover: none)").matches;
+  const infoEl = document.getElementById("info");
+  const modesToggle = document.getElementById("modes-toggle");
+  const modesCurrent = document.getElementById("modes-current");
+  L.DomEvent.disableClickPropagation(infoEl);
+  L.DomEvent.disableScrollPropagation(infoEl);
+  let infoLayer = null;
+
+  function closeInfo() {
+    infoEl.classList.remove("open");
+    infoEl.textContent = "";
+    if (infoLayer && provinceLayer) {
+      provinceLayer.resetStyle(infoLayer);
+    }
+    infoLayer = null;
+  }
+
+  function openInfo(layer, feature) {
+    if (infoLayer && infoLayer !== layer) {
+      provinceLayer.resetStyle(infoLayer);
+    }
+    infoLayer = layer;
+    layer.setStyle(hoverStyleFor(feature));
+    layer.bringToFront();
+    infoEl.textContent = "";
+    const card = tooltipFor(feature.properties);
+    const wrap = document.createElement("div");
+    wrap.className = "pm-tip";
+    wrap.appendChild(card);
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "close";
+    close.setAttribute("aria-label", "Close");
+    close.textContent = "x";
+    close.addEventListener("click", closeInfo);
+    infoEl.appendChild(close);
+    infoEl.appendChild(wrap);
+    infoEl.scrollTop = 0;
+    infoEl.classList.add("open");
+  }
+
+  modesToggle.addEventListener("click", () => {
+    modesEl.classList.toggle("open");
+  });
+
+  legendEl.addEventListener("click", (event) => {
+    if (isMobile() && event.target.closest(".title")) {
+      legendEl.classList.toggle("collapsed");
+    }
+  });
 
   let provinceLayer = null;
   let currentMode = null;
@@ -913,6 +1069,10 @@
   }
 
   function placeLegend() {
+    if (isMobile()) {
+      legendEl.style.top = "";
+      return;
+    }
     legendEl.style.top = (modesEl.offsetTop + modesEl.offsetHeight + 8) + "px";
   }
   window.addEventListener("resize", placeLegend);
@@ -947,7 +1107,7 @@
 
     const hint = document.createElement("div");
     hint.className = "hint";
-    hint.textContent = (HINTS[currentMode] || "") + " Hover a province for details; click a row below to zoom to it.";
+    hint.textContent = (HINTS[currentMode] || "") + (isTouch() ? " Tap a province for details; tap a row below to zoom to it." : " Hover a province for details; click a row below to zoom to it.");
     legendEl.appendChild(hint);
 
     const input = document.createElement("input");
@@ -1013,6 +1173,11 @@
         tradeLayer.remove();
       }
     }
+    const activeButton = modesEl.querySelector("button.active");
+    modesCurrent.textContent = activeButton ? "Map Mode: " + activeButton.textContent : "Map Mode";
+    modesEl.classList.remove("open");
+    legendEl.classList.add("collapsed");
+    closeInfo();
     renderLegend();
   }
 
@@ -1249,11 +1414,23 @@
         layer.bindTooltip(() => tooltipFor(feature.properties), { sticky: true, className: "pm-tip", opacity: 1 });
         layer.on({
           mouseover: (event) => {
+            if (isTouch()) {
+              return;
+            }
             event.target.setStyle(hoverStyleFor(feature));
             event.target.bringToFront();
           },
           mouseout: (event) => {
+            if (isTouch()) {
+              return;
+            }
             provinceLayer.resetStyle(event.target);
+          },
+          click: (event) => {
+            if (isTouch()) {
+              L.DomEvent.stopPropagation(event);
+              openInfo(event.target, feature);
+            }
           }
         });
       }
@@ -1275,8 +1452,9 @@
 
     const mapBounds = provinceLayer.getBounds();
     L.rectangle(mapBounds, { pane: "tilePane", interactive: false, color: "#000000", weight: 2, fillColor: "#ffffff", fillOpacity: 1 }).addTo(map);
+    map.on("click", closeInfo);
     let userMoved = false;
-    const fitAll = () => map.fitBounds(mapBounds, { paddingTopLeft: [12, 92], paddingBottomRight: [12, 12], animate: false });
+    const fitAll = () => map.fitBounds(mapBounds, { paddingTopLeft: [12, isMobile() ? modesEl.offsetHeight + 20 : 92], paddingBottomRight: [12, isMobile() ? 64 : 12], animate: false });
     fitAll();
     map.on("dragstart", () => {
       userMoved = true;
