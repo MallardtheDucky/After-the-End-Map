@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>After the End Map</title>
+<meta name="description" content="Interactive province map of the Crusader Kings 2 mod After the End. Nations, vassals, governments, cultures, religions and trade routes.">
+<meta name="theme-color" content="#c9701f">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="After the End">
+<meta property="og:title" content="After the End Province Map">
+<meta property="og:description" content="Interactive province map of the Crusader Kings 2 mod After the End. Browse nations, vassals, governments, cultures, religions and trade routes as of 2666.1.1.">
+<meta property="og:url" content="https://mallardtheducky.github.io/ate-test-map-2/">
+<meta property="og:image" content="https://mallardtheducky.github.io/ate-test-map-2/images/logo.png">
+<meta property="og:image:width" content="256">
+<meta property="og:image:height" content="256">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="After the End Province Map">
+<meta name="twitter:description" content="Interactive province map of the Crusader Kings 2 mod After the End.">
+<meta name="twitter:image" content="https://mallardtheducky.github.io/ate-test-map-2/images/logo.png">
+<link rel="icon" type="image/png" href="images/logo.png">
+<link rel="apple-touch-icon" href="images/logo.png">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="lib/leaflet.css">
+<style>
+  html, body, #map {
+    height: 100%;
+    margin: 0;
+    background: #0c1a28;
+  }
+  #map {
+    background:
+      radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.55) 100%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320'><path d='M320 0H0V320' fill='none' stroke='%23d6e8f5' stroke-opacity='.11' stroke-width='1.5'/></svg>") 0 0 / 320px 320px,
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><path d='M64 0H0V64' fill='none' stroke='%23d6e8f5' stroke-opacity='.05'/></svg>") 0 0 / 64px 64px,
+      radial-gradient(ellipse at 45% 40%, #24425c 0%, #15293d 55%, #0b1724 100%);
+  }
+  #map::before {
+    content: "";
+    position: absolute;
+    left: 28px;
+    bottom: 28px;
+    z-index: 1;
+    width: clamp(120px, 15vw, 230px);
+    aspect-ratio: 228 / 244;
+    background: url("data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%22-14 -30 228 244%22 fill=%22none%22 stroke=%22%23d6e8f5%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%22100%22 cy=%22100%22 r=%2294%22 stroke-width=%221.5%22/%3E%3Ccircle cx=%22100%22 cy=%22100%22 r=%2280%22 stroke-width=%220.8%22 stroke-dasharray=%222 5%22/%3E%3Ccircle cx=%22100%22 cy=%22100%22 r=%2230%22 stroke-width=%220.8%22/%3E%3Cpolygon points=%22100,22 107,93 178,100 107,107 100,178 93,107 22,100 93,93%22 stroke-width=%220.8%22 fill=%22%23d6e8f5%22 fill-opacity=%220.18%22 transform=%22rotate(45 100 100)%22/%3E%3Cpolygon points=%22100,4 113,87 196,100 113,113 100,196 87,113 4,100 87,87%22 stroke-width=%221.2%22 fill=%22%23d6e8f5%22 fill-opacity=%220.32%22/%3E%3Cpath d=%22M100 4L113 87L100 100L87 87Z%22 fill=%22%23d6e8f5%22 fill-opacity=%220.55%22 stroke=%22none%22/%3E%3Cg stroke=%22none%22 fill=%22%23d6e8f5%22 font-family=%22Georgia,serif%22 font-size=%2220%22 text-anchor=%22middle%22%3E%3Ctext x=%22100%22 y=%22-6%22%3EN%3C/text%3E%3Ctext x=%22100%22 y=%22212%22%3ES%3C/text%3E%3Ctext x=%22-2%22 y=%22107%22%3EW%3C/text%3E%3Ctext x=%22202%22 y=%22107%22%3EE%3C/text%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  #map::after {
+    content: "AFTER THE END\A PROVINCE MAP";
+    position: absolute;
+    left: 28px;
+    top: 104px;
+    z-index: 1;
+    white-space: pre;
+    text-align: left;
+    font: 700 clamp(12px, 1.4vw, 20px)/1.5 Georgia, "Times New Roman", serif;
+    letter-spacing: 0.34em;
+    color: #d6e8f5;
+    opacity: 0.3;
+    pointer-events: none;
+  }
+  #modes {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1000;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: calc(100% - 80px);
+    gap: 6px 14px;
+    padding: 6px 10px 8px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 2px solid #000000;
+    border-radius: 6px;
+  }
+  #modes .group { display: flex; flex-wrap: wrap; gap: 4px; }
+  #modes .group:empty { display: none; }
+  #modes .group::before {
+    content: attr(data-label);
+    flex: 0 0 100%;
+    font: 700 10px sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #555555;
+  }
+  #modes button {
+    padding: 5px 10px;
+    font: 600 12px sans-serif;
+    color: #000000;
+    background: #ffffff;
+    border: 1.5px solid #000000;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  #modes button:hover { background: #ffe98a; }
+  #modes button.active { color: #ffffff; background: #000000; }
+  #legend {
+    position: absolute;
+    top: 104px;
+    bottom: 12px;
+    right: 12px;
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    width: 280px;
+    max-width: calc(100% - 24px);
+    box-sizing: border-box;
+    padding: 8px 10px;
+    font: 12px/1.6 sans-serif;
+    background: rgba(255, 255, 255, 0.94);
+    border: 2px solid #000000;
+    border-radius: 4px;
+  }
+  #legend .title {
+    margin-bottom: 4px;
+    font-weight: 700;
+  }
+  #legend input {
+    box-sizing: border-box;
+    width: 100%;
+    margin-bottom: 6px;
+    padding: 4px 6px;
+    font: 12px sans-serif;
+    border: 1px solid #000000;
+    border-radius: 3px;
+  }
+  #legend .rows {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  #legend .row {
+    padding: 0 2px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #legend .row:hover {
+    background: #e6e6e6;
+  }
+  #legend .row.selected {
+    font-weight: 700;
+    background: #ffe98a;
+  }
+  #legend .hint {
+    margin-bottom: 6px;
+    font-size: 11px;
+    line-height: 1.35;
+    color: #444444;
+  }
+  #legend .opts {
+    margin-bottom: 4px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  #legend .opts input {
+    width: auto;
+    margin: 0 4px 0 0;
+    vertical-align: middle;
+  }
+  #legend .row.nation {
+    font-weight: 700;
+  }
+  #legend .row.vassal {
+    padding-left: 30px;
+  }
+  #legend .row.vassal .rank,
+  #legend .row .more {
+    font-weight: 400;
+    color: #666666;
+    font-size: 11px;
+  }
+  #legend .caret {
+    display: inline-block;
+    width: 16px;
+    color: #000000;
+    text-align: center;
+  }
+  #legend .empty {
+    font-style: italic;
+  }
+  #legend .swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 6px;
+    border: 1px solid #000000;
+    vertical-align: middle;
+  }
+  .leaflet-tooltip.pm-tip {
+    width: 350px;
+    max-width: 350px;
+    padding: 0;
+    overflow: hidden;
+    white-space: normal;
+    font: 13px/1.4 "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: #1b1d22;
+    background: #ffffff;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.25);
+  }
+  .leaflet-tooltip.pm-tip::before { display: none; }
+  .pm-tip .head {
+    padding: 13px 16px 12px;
+    color: var(--on-accent, #ffffff);
+    background: linear-gradient(135deg, var(--accent, #555555), color-mix(in srgb, var(--accent, #555555) 60%, #000000));
+  }
+  .pm-tip .title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .pm-tip .sub {
+    margin-top: 1px;
+    font-size: 11.5px;
+    opacity: 0.85;
+  }
+  .pm-tip .sec {
+    padding: 9px 16px 5px;
+    border-top: 1px solid #eceef1;
+  }
+  .pm-tip .sec:first-of-type { border-top: none; }
+  .pm-tip .sec:last-child { padding-bottom: 11px; }
+  .pm-tip .sec-title {
+    margin-bottom: 3px;
+    font: 700 10px/1.2 "Segoe UI", system-ui, sans-serif;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #8a8f98;
+  }
+  .pm-tip .line {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 8px;
+    margin: 0 -8px;
+    padding: 3px 8px;
+    border-radius: 7px;
+  }
+  .pm-tip .line.hl {
+    background: #f6f1dd;
+    background: color-mix(in srgb, var(--accent, #c9a227) 16%, #ffffff);
+    box-shadow: inset 3px 0 0 var(--accent, #c9a227);
+  }
+  .pm-tip .lab {
+    padding-top: 2px;
+    font-size: 12px;
+    color: #6b7280;
+  }
+  .pm-tip .val {
+    font-weight: 600;
+    overflow-wrap: break-word;
+  }
+  .pm-tip .val small {
+    font-weight: 400;
+    color: #6b7280;
+  }
+  .pm-tip .person {
+    display: block;
+    font-weight: 700;
+  }
+  .pm-tip .meta {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 400;
+    color: #6b7280;
+  }
+  .pm-tip .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 2px 5px 2px 0;
+    padding: 1px 9px 1px 7px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #f1f3f5;
+    border: 1px solid #e0e3e8;
+    border-radius: 999px;
+  }
+  .pm-tip .chip.plain { padding-left: 9px; }
+  .pm-tip .chip.estimated { border-style: dashed; }
+  .pm-tip .dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    border-radius: 50%;
+  }
+  .pm-tip .crumbs {
+    font-weight: 600;
+  }
+  .pm-tip .crumbs .sep {
+    margin: 0 4px;
+    font-weight: 400;
+    color: #9aa0a8;
+  }
+  #modes button.active {
+    color: #ffffff;
+    background: #000000;
+  }
+  #legend {
+    position: absolute;
+    top: 104px;
+    bottom: 12px;
+    right: 12px;
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    width: 280px;
+    max-width: calc(100% - 24px);
+    box-sizing: border-box;
+    padding: 8px 10px;
+    font: 12px/1.6 sans-serif;
+    background: rgba(255, 255, 255, 0.94);
+    border: 2px solid #000000;
+    border-radius: 4px;
+  }
+  #legend .title {
+    margin-bottom: 4px;
+    font-weight: 700;
+  }
+  #legend input {
+    box-sizing: border-box;
+    width: 100%;
+    margin-bottom: 6px;
+    padding: 4px 6px;
+    font: 12px sans-serif;
+    border: 1px solid #000000;
+    border-radius: 3px;
+  }
+  #legend .rows {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  #legend .row {
+    padding: 0 2px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #legend .row:hover {
+    background: #e6e6e6;
+  }
+  #legend .row.selected {
+    font-weight: 700;
+    background: #ffe98a;
+  }
+  #legend .hint {
+    margin-bottom: 6px;
+    font-size: 11px;
+    line-height: 1.35;
+    color: #444444;
+  }
+  #legend .opts {
+    margin-bottom: 4px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  #legend .opts input {
+    width: auto;
+    margin: 0 4px 0 0;
+    vertical-align: middle;
+  }
+  #legend .row.nation {
+    font-weight: 700;
+  }
+  #legend .row.vassal {
+    padding-left: 30px;
+  }
+  #legend .row.vassal .rank,
+  #legend .row .more {
+    font-weight: 400;
+    color: #666666;
+    font-size: 11px;
+  }
+  #legend .caret {
+    display: inline-block;
+    width: 16px;
+    color: #000000;
+    text-align: center;
+  }
+  #legend .empty {
+    font-style: italic;
+  }
+  #legend .swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 6px;
+    border: 1px solid #000000;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="modes">
+  <div class="group" data-label="Who rules">
+    <button type="button" data-mode="nation">Nation</button>
+    <button type="button" data-mode="vassal">Vassals</button>
+    <button type="button" data-mode="government">Government</button>
+    <button type="button" data-mode="vassalgov">Vassal Gov.</button>
+    <button type="button" data-mode="players">Players</button>
+  </div>
+  <div class="group" data-label="People">
+    <button type="button" data-mode="culture">Culture</button>
+    <button type="button" data-mode="religion">Religion</button>
+  </div>
+  <div class="group" data-label="De jure (historic claims)">
+    <button type="button" data-mode="empire">Empire</button>
+    <button type="button" data-mode="kingdom">Kingdom</button>
+    <button type="button" data-mode="duchy">Duchy</button>
+    <button type="button" data-mode="county">County</button>
+  </div>
+  <div class="group" data-label="Other" id="grp-other"></div>
+</div>
+<div id="legend"></div>
+<script src="lib/leaflet.js"></script>
+<script src="data/provinces.js"></script>
+<script src="data/players.js" onerror="this.remove()"></script>
+<script src="data/trade_routes.js" onerror="this.remove()"></script>
+<script src="data/borders.js" onerror="this.remove()"></script>
+<script>
+  const PLAYER_SEA = "#ade7ff";
+  const PLAYER_LAND = "#ffffff";
+  const UNSET_COLORS = { Sea: "#a9c4d6", Wasteland: "#d8d2c4", Unassigned: "#bdbdbd" };
+  const HINTS = {
+    nation: "One color per nation (the top title of a realm).",
+    government: "Colored by the government of each nation's main ruler. Vassals' governments are not counted here.",
+    players: "Realms held by players. Everything else stays blank. Edit data/players.js to change who holds what.",
+    vassalgov: "Colored by the government of the character holding each county, which can differ from the ruler above them (bishoprics, republics, tribes inside a feudal realm).",
+    culture: "Colored by the culture of each province.",
+    religion: "Colored by the religion of each province.",
+    empire: "Historic (de jure) empires, whoever rules them today.",
+    kingdom: "Historic (de jure) kingdoms, whoever rules them today.",
+    duchy: "Historic (de jure) duchies, whoever rules them today.",
+    county: "One color per county."
+  };
+  const MODES = {
+    culture: { title: "Culture", key: "culture" },
+    religion: { title: "Religion", key: "religion" },
+    nation: { title: "Nation", key: "nation_title", colorKey: "realm_color" }
+  };
+  MODES.vassal = { title: "Vassal", key: "vassal_title", nameKey: "vassal" };
+  const BORDERS = window.BORDERS_DATA || null;
+  const borderLayers = [];
+  const vassalInfo = {};
+  function selectedNationKey() {
+    if (currentMode !== "vassal" || selected === null) {
+      return null;
+    }
+    if (selected.startsWith("nation:")) {
+      return selected.slice(7);
+    }
+    if (vassalInfo[selected]) {
+      return selected;
+    }
+    const hit = Object.values(vassalInfo).find((n) => n.vassals[selected]);
+    return hit ? hit.key : null;
+  }
+  const NO_VASSALS_COLOR = "#d4d0c2";
+  const vassalExpanded = new Set();
+  let vassalOnlyWith = true;
+  MODES.government = { title: "Government", key: "government", colorKey: "government_color", nameKey: "government_name" };
+  MODES.players = { title: "Players", key: "player", colorKey: "player_color", nameKey: "player_realm" };
+  MODES.vassalgov = { title: "Vassal Government", key: "county_government", colorKey: "county_government_color", nameKey: "county_government_name" };
+  MODES.empire = { title: "De jure Empire", key: "jure_empire", colorKey: "jure_empire_color", nameKey: "jure_empire_name" };
+  MODES.kingdom = { title: "De jure Kingdom", key: "jure_kingdom", colorKey: "jure_kingdom_color", nameKey: "jure_kingdom_name" };
+  MODES.duchy = { title: "De jure Duchy", key: "jure_duchy", colorKey: "jure_duchy_color", nameKey: "jure_duchy_name" };
+  MODES.county = { title: "County", key: "title", colorKey: "title_color", nameKey: "title_name" };
+  MODES.nation.nameKey = "nation";
+  MODES.culture.colorKey = "culture_color";
+  MODES.religion.colorKey = "religion_color";
+  const TRADE = window.TRADE_ROUTES_DATA || null;
+  const TRADE_LAND = "#e9e4d3";
+  let tradeLayer = null;
+
+  const map = L.map("map", {
+    crs: L.CRS.Simple,
+    minZoom: -6,
+    maxZoom: 4,
+    zoomSnap: 0.25,
+    zoomDelta: 0.5,
+    attributionControl: false,
+    preferCanvas: true
+  });
+
+  const modesEl = document.getElementById("modes");
+  const legendEl = document.getElementById("legend");
+  L.DomEvent.disableClickPropagation(modesEl);
+  L.DomEvent.disableClickPropagation(legendEl);
+  L.DomEvent.disableScrollPropagation(legendEl);
+
+  let provinceLayer = null;
+  let currentMode = null;
+  let selected = null;
+  let filterText = "";
+  const palettes = {};
+  const officialColors = {};
+  const counts = {};
+  const valueNames = {};
+
+  function hslToHex(h, s, l) {
+    s /= 100;
+    l /= 100;
+    const k = (n) => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    const toHex = (x) => Math.round(x * 255).toString(16).padStart(2, "0");
+    return "#" + toHex(f(0)) + toHex(f(8)) + toHex(f(4));
+  }
+
+  function buildPalette(values) {
+    const palette = {};
+    [...new Set(values)].sort().forEach((value, index) => {
+      const hue = (index * 137.508) % 360;
+      const saturation = 62 + (index % 3) * 12;
+      const lightness = 40 + (index % 4) * 8;
+      palette[value] = hslToHex(hue, saturation, lightness);
+    });
+    return palette;
+  }
+
+  const PLAYERS = window.PLAYERS_DATA || [];
+
+  function assignPlayers(features) {
+    const byTitle = {};
+    PLAYERS.forEach((entry) => (entry.titles || []).forEach((title) => {
+      byTitle[title] = entry;
+    }));
+    features.forEach((feature) => {
+      const p = feature.properties;
+      const entry = p.kind === "land" ? byTitle[p.title] || byTitle[p.vassal_title] || byTitle[p.nation_title] : null;
+      p.player = entry ? entry.realm : null;
+      p.player_realm = entry ? entry.realm : null;
+      p.player_color = entry ? entry.color : null;
+      p.player_handle = entry ? entry.player : null;
+    });
+  }
+
+  function valueOf(feature, mode) {
+    const value = feature.properties[MODES[mode].key];
+    return value === null || value === undefined || value === "" ? null : value;
+  }
+
+  function unsetLabel(feature) {
+    const kind = feature.properties.kind;
+    if (kind === "sea") {
+      return "Sea";
+    }
+    if (kind === "wasteland") {
+      return "Wasteland";
+    }
+    return "Unassigned";
+  }
+
+  function keyOf(feature, mode) {
+    const value = valueOf(feature, mode);
+    return value === null ? unsetLabel(feature) : value;
+  }
+
+  function labelOf(mode, value) {
+    if (UNSET_COLORS[value] && !palettes[mode][value]) {
+      return value;
+    }
+    return (valueNames[mode] && valueNames[mode][value]) || value;
+  }
+
+  function colorFor(feature) {
+    if (!currentMode) {
+      return null;
+    }
+    if (currentMode === "trade") {
+      const kind = feature.properties.kind;
+      return kind === "sea" ? UNSET_COLORS.Sea : kind === "wasteland" ? UNSET_COLORS.Wasteland : TRADE_LAND;
+    }
+    const value = valueOf(feature, currentMode);
+    if (value === null) {
+      if (currentMode === "players") {
+        return feature.properties.kind === "sea" ? PLAYER_SEA : PLAYER_LAND;
+      }
+      return UNSET_COLORS[unsetLabel(feature)];
+    }
+    return palettes[currentMode][value] || UNSET_COLORS.Unassigned;
+  }
+
+  function isPicked(feature) {
+    if (selected === null) {
+      return false;
+    }
+    if (currentMode === "vassal" && selected.startsWith("nation:")) {
+      return feature.properties.nation_title === selected.slice(7);
+    }
+    return keyOf(feature, currentMode) === selected;
+  }
+
+  function styleFor(feature) {
+    const fill = colorFor(feature);
+    const picked = isPicked(feature);
+    if (currentMode === "vassal" && BORDERS) {
+      const p = feature.properties;
+      const focusNation = selectedNationKey();
+      const focus = focusNation !== null && p.nation_title === focusNation;
+      const info = vassalInfo[p.nation_title];
+      let color = fill;
+      if (p.kind === "land" && p.nation_title && !focus) {
+        color = palettes.nation[p.nation_title] || fill;
+      }
+      let opacity = 0.9;
+      if (p.kind !== "land") {
+        opacity = 0.45;
+      } else if (focusNation !== null) {
+        opacity = focus ? (picked || selected.startsWith("nation:") ? 1 : 0.55) : 0.2;
+      } else if (!info || !info.list.length) {
+        opacity = 0.55;
+      }
+      return {
+        color: "#000000",
+        weight: 0.4,
+        opacity: 0.2,
+        fill: true,
+        fillColor: color || "#000000",
+        fillOpacity: color ? opacity : 0
+      };
+    }
+    return {
+      color: picked ? "#ffffff" : "#000000",
+      weight: picked ? 2.5 : 1,
+      opacity: 1,
+      fill: true,
+      fillColor: fill || "#000000",
+      fillOpacity: fill ? (currentMode === "players" ? 0.95 : 0.8) : 0
+    };
+  }
+
+  function hoverStyleFor(feature) {
+    if (colorFor(feature)) {
+      return { color: "#000000", weight: 3, fillOpacity: 1 };
+    }
+    return { weight: 3, fillColor: "#000000", fillOpacity: 0.15 };
+  }
+
+  function legendRow(color, text, value) {
+    const row = document.createElement("div");
+    row.className = "row" + (value === selected ? " selected" : "");
+    row.title = text;
+    row.dataset.value = value;
+    const swatch = document.createElement("span");
+    swatch.className = "swatch";
+    swatch.style.background = color;
+    row.appendChild(swatch);
+    row.appendChild(document.createTextNode(text));
+    return row;
+  }
+
+  function fillRows(rowsEl) {
+    rowsEl.textContent = "";
+    const modeCounts = counts[currentMode];
+    const needle = filterText.trim().toLowerCase();
+    const entries = Object.keys(modeCounts)
+      .filter((value) => currentMode !== "players" || palettes.players[value])
+      .filter((value) => !needle || labelOf(currentMode, value).toLowerCase().includes(needle))
+      .sort((a, b) => (UNSET_COLORS[a] && !palettes[currentMode][a] ? 1 : 0) - (UNSET_COLORS[b] && !palettes[currentMode][b] ? 1 : 0) ||
+        modeCounts[b] - modeCounts[a] || labelOf(currentMode, a).localeCompare(labelOf(currentMode, b)));
+
+    entries.forEach((value) => {
+      const color = palettes[currentMode][value] || UNSET_COLORS[value] || UNSET_COLORS.Unassigned;
+      rowsEl.appendChild(legendRow(color, labelOf(currentMode, value) + " (" + modeCounts[value] + ")", value));
+    });
+    if (!entries.length) {
+      const none = document.createElement("div");
+      none.className = "empty";
+      none.textContent = "No match";
+      rowsEl.appendChild(none);
+    }
+  }
+
+  function hexToHsl(hex) {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    let h = 0;
+    let s = 0;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      h *= 60;
+    }
+    return [h, s * 100, l * 100];
+  }
+
+  function vassalShade(base, index) {
+    const [h, s, l] = hexToHsl(base);
+    const hueShift = ((index % 3) - 1) * 7;
+    const lightShift = [13, -12, 24, -22][index % 4];
+    const light = Math.max(30, Math.min(80, l + lightShift));
+    return hslToHex((h + hueShift + 360) % 360, Math.max(30, Math.min(85, s)), light);
+  }
+
+  function buildVassalInfo() {
+    data.features.forEach((feature) => {
+      const p = feature.properties;
+      if (!p.nation_title) {
+        return;
+      }
+      const n = vassalInfo[p.nation_title] || (vassalInfo[p.nation_title] = {
+        key: p.nation_title,
+        name: p.nation,
+        color: palettes.nation[p.nation_title] || UNSET_COLORS.Unassigned,
+        total: 0,
+        direct: 0,
+        vassals: {}
+      });
+      n.total += 1;
+      if (p.vassal_direct) {
+        n.direct += 1;
+      } else {
+        const v = n.vassals[p.vassal_title] || (n.vassals[p.vassal_title] = { key: p.vassal_title, name: p.vassal, rank: p.vassal_rank, count: 0 });
+        v.count += 1;
+      }
+    });
+    palettes.vassal = {};
+    Object.values(vassalInfo).forEach((n) => {
+      n.list = Object.values(n.vassals).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+      palettes.vassal[n.key] = n.color;
+      n.list.forEach((v, index) => {
+        palettes.vassal[v.key] = vassalShade(n.color, index);
+      });
+    });
+  }
+
+  function vassalRow(kind, key, color, label, count, extra, caret) {
+    const row = document.createElement("div");
+    row.className = "row " + kind + (key === selected ? " selected" : "");
+    row.dataset.value = key;
+    row.dataset.kind = kind;
+    row.title = label;
+    if (kind === "nation") {
+      const c = document.createElement("span");
+      c.className = "caret";
+      c.textContent = caret || "";
+      row.appendChild(c);
+    }
+    const swatch = document.createElement("span");
+    swatch.className = "swatch";
+    swatch.style.background = color;
+    row.appendChild(swatch);
+    row.appendChild(document.createTextNode(label + " (" + count + ")"));
+    if (extra) {
+      const more = document.createElement("span");
+      more.className = kind === "nation" ? "more" : "rank";
+      more.textContent = " " + extra;
+      row.appendChild(more);
+    }
+    return row;
+  }
+
+  function fillVassalRows(rowsEl) {
+    rowsEl.textContent = "";
+    const needle = filterText.trim().toLowerCase();
+    const nations = Object.values(vassalInfo).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+    let shown = 0;
+    nations.forEach((n) => {
+      const hasVassals = n.list.length > 0;
+      if (vassalOnlyWith && !needle && !hasVassals) {
+        return;
+      }
+      const nationMatch = !needle || n.name.toLowerCase().includes(needle);
+      const matched = needle && !nationMatch ? n.list.filter((v) => v.name.toLowerCase().includes(needle)) : n.list;
+      if (!nationMatch && !matched.length) {
+        return;
+      }
+      const open = hasVassals && (vassalExpanded.has(n.key) || (needle && !nationMatch));
+      const extra = hasVassals ? "- " + n.list.length + " vassal" + (n.list.length === 1 ? "" : "s") : "";
+      rowsEl.appendChild(vassalRow("nation", "nation:" + n.key, palettes.vassal[n.key], n.name, n.total, extra, hasVassals ? (open ? "\u25BE" : "\u25B8") : ""));
+      shown += 1;
+      if (open) {
+        if (n.direct > 0 && !needle) {
+          rowsEl.appendChild(vassalRow("vassal", n.key, palettes.vassal[n.key], "Held directly", n.direct, "", ""));
+        }
+        matched.forEach((v) => {
+          rowsEl.appendChild(vassalRow("vassal", v.key, palettes.vassal[v.key], v.name, v.count, v.rank, ""));
+        });
+      }
+    });
+    if (!shown) {
+      const none = document.createElement("div");
+      none.className = "empty";
+      none.textContent = "No match";
+      rowsEl.appendChild(none);
+    }
+  }
+
+  function renderVassalLegend() {
+    const nations = Object.values(vassalInfo);
+    const vassalCount = nations.reduce((sum, n) => sum + n.list.length, 0);
+    const withVassals = nations.filter((n) => n.list.length).length;
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = "Vassals (" + vassalCount + " realms in " + withVassals + " nations)";
+    legendEl.appendChild(title);
+
+    const hint = document.createElement("div");
+    hint.className = "hint";
+    hint.textContent = "Each nation has one color; paler = no vassals. Click a nation below to see its vassal realms in shades of its color. Thick black lines are nation borders, thin lines vassal borders.";
+    legendEl.appendChild(hint);
+
+    const input = document.createElement("input");
+    input.type = "search";
+    input.placeholder = "Search nation or vassal...";
+    input.value = filterText;
+    legendEl.appendChild(input);
+
+    const opts = document.createElement("label");
+    opts.className = "opts";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = vassalOnlyWith;
+    opts.appendChild(box);
+    opts.appendChild(document.createTextNode("Only nations with vassals"));
+    legendEl.appendChild(opts);
+
+    const rowsEl = document.createElement("div");
+    rowsEl.className = "rows";
+    legendEl.appendChild(rowsEl);
+    fillVassalRows(rowsEl);
+
+    input.addEventListener("input", () => {
+      filterText = input.value;
+      fillVassalRows(rowsEl);
+    });
+    box.addEventListener("change", () => {
+      vassalOnlyWith = box.checked;
+      fillVassalRows(rowsEl);
+    });
+    rowsEl.addEventListener("click", (event) => {
+      const row = event.target.closest(".row");
+      if (!row) {
+        return;
+      }
+      const key = row.dataset.value;
+      if (row.dataset.kind === "nation") {
+        const id = key.slice(7);
+        if (event.target.closest(".caret") || !vassalExpanded.has(id)) {
+          if (vassalExpanded.has(id)) {
+            vassalExpanded.delete(id);
+          } else if (vassalInfo[id].list.length) {
+            vassalExpanded.add(id);
+          }
+          fillVassalRows(rowsEl);
+          if (event.target.closest(".caret")) {
+            return;
+          }
+        }
+      }
+      selectValue(key);
+    });
+    legendEl.style.display = "flex";
+  }
+
+  function renderTradeLegend() {
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = "Trade Routes (" + new Set(TRADE.features.map((f) => f.properties.name)).size + ")";
+    legendEl.appendChild(title);
+    const rowsEl = document.createElement("div");
+    rowsEl.className = "rows";
+    const seen = new Set();
+    TRADE.features.forEach((feature) => {
+      const name = feature.properties.name;
+      if (seen.has(name)) {
+        return;
+      }
+      seen.add(name);
+      rowsEl.appendChild(legendRow(tradeColor(feature), feature.properties.display_name || name, name));
+    });
+    rowsEl.addEventListener("click", (event) => {
+      const row = event.target.closest(".row");
+      if (!row) {
+        return;
+      }
+      let bounds = null;
+      tradeLayer.eachLayer((layer) => {
+        if (layer.feature.properties.name === row.dataset.value) {
+          bounds = bounds ? bounds.extend(layer.getBounds()) : L.latLngBounds(layer.getBounds().getSouthWest(), layer.getBounds().getNorthEast());
+        }
+      });
+      if (bounds) {
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 1 });
+      }
+    });
+    legendEl.appendChild(rowsEl);
+    legendEl.style.display = "flex";
+  }
+
+  function tradeColor(feature) {
+    const own = feature.properties.color;
+    if (own && /^#[0-9a-f]{6}$/i.test(own)) {
+      return own;
+    }
+    const names = [...new Set(TRADE.features.map((f) => f.properties.name))].sort();
+    const fallback = ["#b3261e", "#0b5fa5", "#1b7f3b", "#7b2cbf", "#c76b00", "#006d77"];
+    return fallback[names.indexOf(feature.properties.name) % fallback.length];
+  }
+
+  function placeLegend() {
+    legendEl.style.top = (modesEl.offsetTop + modesEl.offsetHeight + 8) + "px";
+  }
+  window.addEventListener("resize", placeLegend);
+
+  function renderLegend() {
+    placeLegend();
+    legendEl.textContent = "";
+    if (!currentMode) {
+      legendEl.style.display = "none";
+      return;
+    }
+    if (currentMode === "trade") {
+      renderTradeLegend();
+      return;
+    }
+    if (currentMode === "vassal") {
+      renderVassalLegend();
+      return;
+    }
+    const mode = MODES[currentMode];
+    const modeCounts = counts[currentMode];
+    const total = Object.keys(modeCounts).filter((value) => palettes[currentMode][value]).length;
+
+    const title = document.createElement("div");
+    title.className = "title";
+    let heading = mode.title + " (" + total + ")";
+    if (currentMode === "nation" && data.nation_date) {
+      heading += " - " + data.nation_date;
+    }
+    title.textContent = heading;
+    legendEl.appendChild(title);
+
+    const hint = document.createElement("div");
+    hint.className = "hint";
+    hint.textContent = (HINTS[currentMode] || "") + " Hover a province for details; click a row below to zoom to it.";
+    legendEl.appendChild(hint);
+
+    const input = document.createElement("input");
+    input.type = "search";
+    input.placeholder = "Search " + mode.title.toLowerCase() + "...";
+    input.value = filterText;
+    legendEl.appendChild(input);
+
+    const rowsEl = document.createElement("div");
+    rowsEl.className = "rows";
+    legendEl.appendChild(rowsEl);
+    fillRows(rowsEl);
+
+    input.addEventListener("input", () => {
+      filterText = input.value;
+      fillRows(rowsEl);
+    });
+    rowsEl.addEventListener("click", (event) => {
+      const row = event.target.closest(".row");
+      if (row) {
+        selectValue(row.dataset.value);
+      }
+    });
+    legendEl.style.display = "flex";
+  }
+
+  function selectValue(value) {
+    selected = selected === value ? null : value;
+    provinceLayer.setStyle(styleFor);
+    legendEl.querySelectorAll(".row").forEach((row) => {
+      row.classList.toggle("selected", row.dataset.value === selected);
+    });
+    if (selected === null) {
+      return;
+    }
+    let bounds = null;
+    provinceLayer.eachLayer((layer) => {
+      if (isPicked(layer.feature)) {
+        bounds = bounds ? bounds.extend(layer.getBounds()) : L.latLngBounds(layer.getBounds().getSouthWest(), layer.getBounds().getNorthEast());
+        layer.bringToFront();
+      }
+    });
+    if (bounds) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 1 });
+    }
+  }
+
+  function setMode(mode) {
+    currentMode = mode;
+    selected = null;
+    filterText = "";
+    if (provinceLayer) {
+      provinceLayer.setStyle(styleFor);
+    }
+    modesEl.querySelectorAll("button").forEach((button) => {
+      button.classList.toggle("active", button.dataset.mode === mode);
+    });
+    borderLayers.forEach((layer) => (mode === "vassal" ? layer.addTo(map) : layer.remove()));
+    if (tradeLayer) {
+      if (mode === "trade") {
+        tradeLayer.addTo(map).bringToFront();
+      } else {
+        tradeLayer.remove();
+      }
+    }
+    renderLegend();
+  }
+
+  function pretty(text) {
+    return String(text).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  function luminance(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const channel = (v) => {
+      const c = v / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255);
+  }
+
+  function tooltipFor(p) {
+    const el = (tag, cls, text) => {
+      const node = document.createElement(tag);
+      if (cls) {
+        node.className = cls;
+      }
+      if (text !== undefined && text !== null) {
+        node.textContent = text;
+      }
+      return node;
+    };
+    const box = el("div", "card");
+    const accent = palettes.nation[p.nation_title] || p.realm_color || "#5b6470";
+    const light = /^#[0-9a-f]{6}$/i.test(accent) && luminance(accent) > 0.45;
+    box.style.setProperty("--accent", accent);
+    box.style.setProperty("--on-accent", light ? "#1b1d22" : "#ffffff");
+
+    const head = el("div", "head");
+    head.appendChild(el("div", "title", p.name));
+    head.appendChild(el("div", "sub", "Province #" + p.id + (p.kind === "sea" ? " \u00b7 Sea zone" : p.kind === "wasteland" ? " \u00b7 Wasteland, no ruler" : p.nation ? " \u00b7 " + p.nation : "")));
+    box.appendChild(head);
+    if (p.kind === "sea" || p.kind === "wasteland") {
+      return box;
+    }
+
+    const section = (title) => {
+      const node = el("div", "sec");
+      node.appendChild(el("div", "sec-title", title));
+      box.appendChild(node);
+      return node;
+    };
+    const line = (parent, label, modes) => {
+      const row = el("div", "line" + (modes && modes.includes(currentMode) ? " hl" : ""));
+      row.appendChild(el("div", "lab", label));
+      const value = el("div", "val");
+      row.appendChild(value);
+      parent.appendChild(row);
+      return value;
+    };
+    const chip = (parent, text, color, estimated) => {
+      const node = el("span", "chip" + (color ? "" : " plain") + (estimated ? " estimated" : ""));
+      if (color) {
+        const dot = el("i", "dot");
+        dot.style.background = color;
+        node.appendChild(dot);
+      }
+      node.appendChild(document.createTextNode(text + (estimated ? " (estimated)" : "")));
+      parent.appendChild(node);
+    };
+    const note = (parent, text) => {
+      if (text) {
+        parent.appendChild(document.createTextNode(" "));
+        parent.appendChild(el("small", null, text));
+      }
+    };
+    const person = (parent, name, capital) => {
+      parent.appendChild(el("span", "person", name));
+      if (capital) {
+        parent.appendChild(el("span", "meta", "Capital: " + capital));
+      }
+    };
+
+    if (p.player_realm) {
+      const sec = section("Player");
+      const row = line(sec, "Realm", ["players"]);
+      chip(row, p.player_realm, p.player_color);
+      if (p.player_handle) {
+        row.appendChild(el("span", "meta", p.player_handle));
+      }
+    }
+
+    const realm = section("Realm");
+    const nation = line(realm, "Nation", ["nation"]);
+    chip(nation, p.nation, palettes.nation[p.nation_title]);
+    note(nation, p.nation_rank);
+    const held = line(realm, "Held by", ["vassal"]);
+    if (p.vassal_direct) {
+      held.appendChild(document.createTextNode("The nation's ruler directly"));
+    } else {
+      chip(held, p.vassal, palettes.vassal[p.vassal_title]);
+      note(held, p.vassal_rank ? "vassal " + p.vassal_rank : "");
+    }
+    const chain = (p.liege_chain || "").split(" > ").filter(Boolean);
+    if (chain.length > 1 && !p.vassal_direct) {
+      const crumbs = line(realm, "Liege chain", ["vassal"]);
+      crumbs.className += " crumbs";
+      chain.forEach((name, index) => {
+        if (index) {
+          crumbs.appendChild(el("span", "sep", "\u2192"));
+        }
+        crumbs.appendChild(document.createTextNode(name));
+      });
+    }
+
+    if (p.ruler_name || p.vassal_ruler_name || p.county_holder_name) {
+      const people = section("People & government");
+      if (p.ruler_name) {
+        const ruler = line(people, "Ruler", ["government", "nation"]);
+        person(ruler, p.ruler_name, p.ruler_capital);
+        if (p.government_name) {
+          chip(ruler, p.government_name, p.government_color, p.government_certain === false);
+        }
+      }
+      if (!p.vassal_direct && p.vassal_ruler_name) {
+        const vassalRuler = line(people, "Vassal realm", ["vassal"]);
+        person(vassalRuler, p.vassal_ruler_name, null);
+        if (p.holder_government_name) {
+          chip(vassalRuler, p.holder_government_name, p.holder_government_color, p.holder_government_certain === false);
+        }
+      }
+      if (p.county_holder_name) {
+        const holder = line(people, "County holder", ["vassalgov"]);
+        person(holder, p.county_holder_name, p.county_holder_capital);
+        if (p.county_government_name) {
+          chip(holder, p.county_government_name, p.county_government_color, p.county_government_certain === false);
+        }
+      }
+    }
+
+    const land = section("Province");
+    if (p.culture) {
+      chip(line(land, "Culture", ["culture"]), pretty(p.culture), p.culture_color);
+    }
+    if (p.religion) {
+      const religion = line(land, "Religion", ["religion"]);
+      chip(religion, pretty(p.religion), p.religion_color);
+    }
+    if (p.ruler_religion && p.ruler_religion !== p.religion) {
+      const rulerFaith = line(land, "Ruler's faith", []);
+      chip(rulerFaith, pretty(p.ruler_religion));
+      if (p.ruler_culture) {
+        chip(rulerFaith, pretty(p.ruler_culture));
+      }
+    }
+    const jure = [p.jure_empire_name, p.jure_kingdom_name, p.jure_duchy_name].filter(Boolean);
+    if (jure.length) {
+      const crumbs = line(land, "De jure", ["empire", "kingdom", "duchy", "county"]);
+      crumbs.className += " crumbs";
+      jure.forEach((name, index) => {
+        if (index) {
+          crumbs.appendChild(el("span", "sep", "\u203a"));
+        }
+        crumbs.appendChild(document.createTextNode(name));
+      });
+    }
+    if (p.baronies) {
+      const list = p.baronies.split("; ");
+      const barony = line(land, list.length === 1 ? "Barony" : "Baronies", []);
+      list.slice(0, 8).forEach((entry) => {
+        const match = entry.match(/^(.*) \((\w+)\)$/);
+        const text = match ? match[1] : entry;
+        chip(barony, text, null);
+      });
+      if (list.length > 8) {
+        barony.appendChild(el("small", null, "+" + (list.length - 8) + " more"));
+      }
+    }
+    return box;
+  }
+
+  modesEl.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-mode]");
+    if (button) {
+      setMode(button.dataset.mode);
+    }
+  });
+
+  const data = window.PROVINCES_DATA;
+  if (!data) {
+    document.getElementById("map").textContent = "data/provinces.js is missing or failed to load";
+  } else {
+    assignPlayers(data.features);
+    Object.keys(MODES).forEach((mode) => {
+      const values = [];
+      counts[mode] = {};
+      officialColors[mode] = {};
+      data.features.forEach((feature) => {
+        const value = valueOf(feature, mode);
+        const key = keyOf(feature, mode);
+        counts[mode][key] = (counts[mode][key] || 0) + 1;
+        if (value !== null) {
+          values.push(value);
+        }
+        if (MODES[mode].nameKey && value !== null) {
+          valueNames[mode] = valueNames[mode] || {};
+          valueNames[mode][value] = feature.properties[MODES[mode].nameKey];
+        }
+        const official = feature.properties[MODES[mode].colorKey];
+        if (value !== null && official && /^#[0-9a-f]{6}$/i.test(official)) {
+          officialColors[mode][value] = official;
+        }
+      });
+      palettes[mode] = buildPalette(values);
+      Object.assign(palettes[mode], officialColors[mode]);
+    });
+    PLAYERS.forEach((entry) => {
+      palettes.players[entry.realm] = entry.color;
+      counts.players[entry.realm] = counts.players[entry.realm] || 0;
+      valueNames.players = valueNames.players || {};
+      valueNames.players[entry.realm] = entry.realm;
+    });
+
+    buildVassalInfo();
+
+    if (BORDERS) {
+      map.createPane("borders");
+      map.getPane("borders").style.zIndex = 450;
+      map.getPane("borders").style.pointerEvents = "none";
+      const renderer = L.canvas({ pane: "borders" });
+      const lines = (list) => ({ type: "MultiLineString", coordinates: list });
+      borderLayers.push(L.geoJSON(lines(BORDERS.vassal), { pane: "borders", renderer, interactive: false, style: { color: "#222222", weight: 1, opacity: 0.7 } }));
+      borderLayers.push(L.geoJSON(lines(BORDERS.nation), { pane: "borders", renderer, interactive: false, style: { color: "#000000", weight: 1.8, opacity: 0.9 } }));
+    }
+
+    provinceLayer = L.geoJSON(data, {
+      style: styleFor,
+      onEachFeature: (feature, layer) => {
+        layer.bindTooltip(() => tooltipFor(feature.properties), { sticky: true, className: "pm-tip", opacity: 1 });
+        layer.on({
+          mouseover: (event) => {
+            event.target.setStyle(hoverStyleFor(feature));
+            event.target.bringToFront();
+          },
+          mouseout: (event) => {
+            provinceLayer.resetStyle(event.target);
+          }
+        });
+      }
+    }).addTo(map);
+
+    if (TRADE && TRADE.features && TRADE.features.length) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.mode = "trade";
+      button.textContent = "Trade Routes";
+      document.getElementById("grp-other").appendChild(button);
+      tradeLayer = L.geoJSON(TRADE, {
+        style: (feature) => ({ color: tradeColor(feature), weight: 3, opacity: 0.95 }),
+        onEachFeature: (feature, layer) => {
+          layer.bindTooltip(feature.properties.display_name || feature.properties.name, { sticky: true });
+        }
+      });
+    }
+
+    const mapBounds = provinceLayer.getBounds();
+    L.rectangle(mapBounds, { pane: "tilePane", interactive: false, color: "#000000", weight: 2, fillColor: "#ffffff", fillOpacity: 1 }).addTo(map);
+    let userMoved = false;
+    const fitAll = () => map.fitBounds(mapBounds, { paddingTopLeft: [12, 92], paddingBottomRight: [12, 12], animate: false });
+    fitAll();
+    map.on("dragstart", () => {
+      userMoved = true;
+    });
+    map.getContainer().addEventListener("wheel", () => {
+      userMoved = true;
+    }, { passive: true });
+    window.addEventListener("resize", () => {
+      if (!userMoved) {
+        map.invalidateSize();
+        fitAll();
+      }
+    });
+    setMode("nation");
+  }
+</script>
+</body>
+</html>
